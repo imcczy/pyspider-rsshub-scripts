@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- encoding: utf-8 -*-
-# Created on 2016-03-21 14:33:30
-# Project: luoo
+# Created on 2018-10-09 00:26:38
+# Project: radioluoo
 
 from pyspider.libs.base_handler import *
 
@@ -12,18 +12,24 @@ class Handler(BaseHandler):
 
     @every(minutes=24 * 60)
     def on_start(self):
-        for i in xrange(1,805):
-            self.crawl('http://www.luoo.net/music/'+str(i), callback=self.detail_page)
+        for i in range(1,101):
+            self.crawl('http://www.luoo.net/tag/?p='+str(i), callback=self.index_page)
+
+    @config(age=10 * 24 * 60 * 60)
+    def index_page(self, response):
+        for each in response.doc('.vol-list > div.item > a').items():
+            self.crawl(each.attr.href, callback=self.detail_page)
 
     @config(priority=2)
     def detail_page(self, response):
-        d=response.doc('.vol-tracklist');
-        list = [];
-        for i in d.items('li'):
-            list.append(i('.trackname').text()+' '+i('.player-wrapper .artist').text())
+        tracks = dict()
+        for each in response.doc('ul > li.track-item').items():
+            tracks[each('.trackname').text()] = each('.artist').text()
+        
         return {
-            "title": response.doc('.vol-title').text(),
-            "type": response.doc('.vol-tag-item').text(),
-            "songs": list,
-            "article": response.doc('.vol-desc').text(),
+            "tags": response.doc('.vol-tag-item').text(),
+            "desc": response.doc('.vol-desc').text(),
+            "url": response.url,
+            "title": response.doc('title').text(),
+            "tracks": tracks
         }
